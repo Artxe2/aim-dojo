@@ -1,0 +1,20 @@
+{
+	"author": "artxe2",
+	"description": "AIM DOJO",
+	"devDependencies": {
+		"@webgpu/types": "^0.1.65",
+		"eslint": "^9.36.0",
+		"eslint-plugin-lube": "^0.5.1",
+		"serve": "^14.2.5",
+		"typescript": "^5.9.2",
+		"typescript-eslint": "^8.44.1"
+	},
+	"keywords": [],
+	"name": "aim-dojo",
+	"scripts": {
+		"dev": "serve docs",
+		"lint": "eslint --cache --fix **/*.{d.ts,js,json}"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}
