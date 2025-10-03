@@ -3,17 +3,12 @@ const Config = (() => {
 	const _ = {
 		audio: { volume: .5 },
 		crosshair: {
-			gap: 8,
+			gap: 4,
 			length: 20,
 			outline: 1,
-			thickness: 3
+			thickness: 1
 		},
 		flick: {
-			first_dist_mul: 4,
-			inactive_alpha: .25,
-			num_targets: 12
-		},
-		flick_3d: {
 			first_dist_mul: 4,
 			inactive_alpha: .25,
 			num_targets: 12
@@ -26,11 +21,6 @@ const Config = (() => {
 			rings: 2,
 			spacing: .4
 		},
-		ls_keys: {
-			flick: "best_flick_score",
-			flick_3d: "best_flick_3d_score",
-			tracking: "best_tracking_score"
-		},
 		stats: { window_ms: 30_000 },
 		target: { base_radius: 5 },
 		tracking: {
@@ -39,9 +29,9 @@ const Config = (() => {
 			move_change_interval_ms: 500,
 			size_change_interval_ms: 1_000,
 			size_lerp_ms: 100,
-			size_steps: [ 1, 2, 3, 4, 5 ],
+			size_steps: [ 1, 1, 2, 3, 5, 8 ],
 			speed_lerp_ms: 100,
-			speed_steps: [ 1, 1.5, 2 ]
+			speed_steps: [ 1, 1, 2, 3 ]
 		},
 		view: {
 			hfov_deg: 103,
@@ -51,6 +41,11 @@ const Config = (() => {
 	return /** @type {DeepReadonly<typeof _>} */(_)/**/
 })()
 const HUD = (() => {
+	const _ = {
+		cycle_active_game_sens,
+		update_game_sens,
+		update_hud
+	}
 	/**
 	 * @param {number} hfov_deg
 	 * @returns {number}
@@ -116,10 +111,10 @@ const HUD = (() => {
 		function two(n) {
 			return n < 10 ? "0" + n : "" + n
 		}
-		const total_sec = Math.floor(ms / 1000)
+		const total_sec = Math.floor(ms / 1_000)
 		const s = total_sec % 60
 		const m = Math.floor(total_sec / 60) % 60
-		const h = Math.floor(total_sec / 3600)
+		const h = Math.floor(total_sec / 3_600)
 		return h > 0 ? `${h}:${two(m)}:${two(s)}` : `${two(m)}:${two(s)}`
 	}
 	/**
@@ -245,39 +240,31 @@ const HUD = (() => {
 		if (mode == "flick") {
 			const { count_crit, count_hit, count_shoot } = State.stats
 			const score = count_crit * 150 + count_hit * 250 - count_shoot * 100
-			if (score > State.flick.best_score) {
-				State.flick.best_score = score
-				localStorage.setItem(
-					Config.ls_keys.flick,
-					String(score)
+			if (State.camera.mode == "2d") {
+				if (score > State.flick.best_score) {
+					State.flick.best_score = score
+					localStorage.setItem(
+						"flick.best_score",
+						String(score)
+					)
+				}
+				set_text_if_changed(
+					best_score_el,
+					`${score} / ${State.flick.best_score}`
+				)
+			} else {
+				if (score > State.flick.best_score_3d) {
+					State.flick.best_score_3d = score
+					localStorage.setItem(
+						"flick.best_score_3d",
+						String(score)
+					)
+				}
+				set_text_if_changed(
+					best_score_el,
+					`${score} / ${State.flick.best_score_3d}`
 				)
 			}
-			set_text_if_changed(
-				best_score_el,
-				`${score} / ${State.flick.best_score}`
-			)
-			set_text_if_changed(
-				accuracy_el,
-				count_shoot ? round_to_2(count_hit / count_shoot * 100) : 0
-			)
-			set_text_if_changed(
-				crit_rate_el,
-				count_hit ? round_to_2(count_crit / count_hit * 100) : 0
-			)
-		} else if (mode == "flick_3d") {
-			const { count_crit, count_hit, count_shoot } = State.stats
-			const score = count_crit * 150 + count_hit * 250 - count_shoot * 100
-			if (score > State.flick_3d.best_score) {
-				State.flick_3d.best_score = score
-				localStorage.setItem(
-					Config.ls_keys.flick_3d,
-					String(score)
-				)
-			}
-			set_text_if_changed(
-				best_score_el,
-				`${score} / ${State.flick_3d.best_score}`
-			)
 			set_text_if_changed(
 				accuracy_el,
 				count_shoot ? round_to_2(count_hit / count_shoot * 100) : 0
@@ -293,17 +280,31 @@ const HUD = (() => {
 				sum_shoot_ms
 			} = State.stats
 			const score = (sum_crit_ms + sum_hit_ms) | 0
-			if (score > State.tracking.best_score) {
-				State.tracking.best_score = score
-				localStorage.setItem(
-					Config.ls_keys.tracking,
-					String(score)
+			if (State.camera.mode == "2d") {
+				if (score > State.tracking.best_score) {
+					State.tracking.best_score = score
+					localStorage.setItem(
+						"tracking.best_score",
+						String(score)
+					)
+				}
+				set_text_if_changed(
+					best_score_el,
+					`${score} / ${State.tracking.best_score}`
+				)
+			} else {
+				if (score > State.tracking.best_score_3d) {
+					State.tracking.best_score_3d = score
+					localStorage.setItem(
+						"tracking.best_score_3d",
+						String(score)
+					)
+				}
+				set_text_if_changed(
+					best_score_el,
+					`${score} / ${State.tracking.best_score_3d}`
 				)
 			}
-			set_text_if_changed(
-				best_score_el,
-				`${score} / ${State.tracking.best_score}`
-			)
 			set_text_if_changed(
 				accuracy_el,
 				sum_shoot_ms
@@ -359,13 +360,20 @@ const HUD = (() => {
 	const val_operator5_el = /** @type {HTMLSpanElement} */(document.getElementById("val_operator5"))/**/
 	const val_spectre_el = /** @type {HTMLSpanElement} */(document.getElementById("val_spectre"))/**/
 	const val_vandal_el = /** @type {HTMLSpanElement} */(document.getElementById("val_vandal"))/**/
-	return {
-		cycle_active_game_sens,
-		update_game_sens,
-		update_hud
-	}
+	return _
 })()
 const Logic = (() => {
+	const _ = {
+		compute_perspective_correction,
+		dir_from_yaw_pitch,
+		hfov_to_vfov,
+		on_frame,
+		px_to_rad,
+		shoot,
+		start_game,
+		stop_game,
+		to_rad
+	}
 	/**
 	 * @param {number} r
 	 * @param {number} base
@@ -382,6 +390,69 @@ const Logic = (() => {
 		return n < 0 ? 0 : n > 1 ? 1 : n
 	}
 	/**
+	 * @param {number} fov_deg
+	 * @returns {number}
+	 */
+	function compute_perspective_correction(fov_deg) {
+		/**
+		 * @param {number} a
+		 * @param {number} b
+		 * @param {number} eps
+		 * @param {number} whole
+		 * @param {number} depth
+		 * @returns {number}
+		 */
+		function adaptive_simpson(a, b, eps, whole, depth) {
+			const c = (a + b) / 2
+			const left = simpson(a, c)
+			const right = simpson(c, b)
+			const delta = left + right - whole
+			if (depth <= 0 || Math.abs(delta) < 15 * eps) {
+				return left + right + delta / 15
+			}
+			return adaptive_simpson(a, c, eps / 2, left, depth - 1)
+				+ adaptive_simpson(c, b, eps / 2, right, depth - 1)
+		}
+		/**
+		 * @param {number} t
+		 * @returns {number}
+		 */
+		function integrand(t) {
+			const s = Math.sin(t)
+			return Math.sqrt(1 - m_neg * s * s)
+		}
+		/**
+		 * @param {number} a
+		 * @param {number} b
+		 * @returns {number}
+		 */
+		function simpson(a, b) {
+			const c = (a + b) / 2
+			const h = b - a
+			return (h / 6) * (integrand(a) + 4 * integrand(c) + integrand(b))
+		}
+		const eps = 1e-10
+		const max_depth = 20
+		const fov_rad = to_rad(fov_deg)
+		const half_fov = fov_rad / 2
+		const tan_half_fov = Math.tan(half_fov)
+		const m_neg = -tan_half_fov * tan_half_fov
+		const a = 0
+		const b = half_fov
+		const whole = simpson(a, b)
+		const e_inc = adaptive_simpson(a, b, eps, whole, max_depth)
+		const ratio = (2 / fov_rad) * e_inc * Math.cos(half_fov)
+		return 2 * tan_half_fov * ratio
+	}
+	/**
+	 * @param {number} r
+	 * @param {number} cr
+	 * @returns {number}
+	 */
+	function core_offset_angle(r, cr) {
+		return r - cr
+	}
+	/**
 	 * @param {number} yaw
 	 * @param {number} pitch
 	 * @returns {[ number, number, number ]}
@@ -392,6 +463,14 @@ const Logic = (() => {
 		const cy = Math.cos(pitch)
 		const sy = Math.sin(pitch)
 		return [ sx * cy, sy, -cx * cy ]
+	}
+	/**
+	 * @param {[ number, number, number ]} a
+	 * @param {[ number, number, number ]} b
+	 * @returns {number}
+	 */
+	function dot(a, b) {
+		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 	}
 	/**
 	 * @param {number} h_deg
@@ -457,35 +536,32 @@ const Logic = (() => {
 			}
 		}
 		if (mode == "flick") {
-			if (!State.flick.targets.length) {
-				const { base_radius } = Config.target
-				const { num_targets } = Config.flick
-				const { targets } = State.flick
-				const base_d = Config.flick.first_dist_mul * base_radius
-				let { x, y } = State.camera
-				let i = 1
-				while (i <= num_targets) {
-					const theta = Math.random() * TAU
-					const dist = base_d * i
-					x += Math.cos(theta) * dist
-					y += Math.sin(theta) * dist
-					const r = base_radius * Math.sqrt(i)
-					const cr = calc_core_radius(r, base_radius)
-					const cy = y - r + cr
-					targets[num_targets - i++] = { cr, cx: x, cy, r, x, y }
+			if (State.camera.mode == "2d") {
+				if (!State.flick.targets.length) {
+					const { base_radius } = Config.target
+					const { num_targets } = Config.flick
+					const { targets } = State.flick
+					const base_d = Config.flick.first_dist_mul * base_radius
+					let { x, y } = State.camera
+					let i = 1
+					while (i <= num_targets) {
+						const theta = Math.random() * TAU
+						const dist = base_d * i
+						x += Math.cos(theta) * dist
+						y += Math.sin(theta) * dist
+						const r = base_radius * Math.sqrt(i)
+						const cr = calc_core_radius(r, base_radius)
+						const cy = y - r + cr
+						targets[num_targets - i++] = { cr, cx: x, cy, r, x, y }
+					}
 				}
-			}
-		} else if (mode == "flick_3d") {
-			if (!State.flick_3d.targets.length) {
-				const base_radius_rad = Math.atan(
-					(2 * Config.target.base_radius / State.device.width) * Math.tan(
-						to_rad(Config.view.hfov_deg) / 2
-					)
-				)
-				const { num_targets } = Config.flick_3d
-				const { targets } = State.flick_3d
-				const LIMIT = Logic.to_rad(60)
-				const base_d = Config.flick_3d.first_dist_mul * base_radius_rad
+			} else if (!State.flick.targets_3d.length) {
+				const { base_radius } = Config.target
+				const base_radius_rad = px_to_rad(base_radius)
+				const { first_dist_mul, num_targets } = Config.flick
+				const { targets_3d } = State.flick
+				const range_rad = Logic.to_rad(40)
+				const base_d = first_dist_mul * base_radius_rad
 				let { pitch: p, yaw: y } = State.camera
 				let i = 1
 				while (i <= num_targets) {
@@ -495,8 +571,8 @@ const Logic = (() => {
 					const dp_desired = Math.sin(theta) * dist
 					const p_target_raw = p + dp_desired
 					const p_target = Math.max(
-						-LIMIT,
-						Math.min(LIMIT, p_target_raw)
+						-range_rad,
+						Math.min(range_rad, p_target_raw)
 					)
 					const dp_used = p_target - p
 					const dy_mag = Math.sqrt(
@@ -511,10 +587,8 @@ const Logic = (() => {
 					p += dp_used
 					const r = base_radius_rad * Math.sqrt(i)
 					const cr = calc_core_radius(r, base_radius_rad)
-					const cp = p + Math.atan(
-						Math.max(0, Math.tan(r) - Math.tan(cr))
-					)
-					targets[num_targets - i++] = { cp, cr, p, r, y }
+					const cp = p + core_offset_angle(r, cr)
+					targets_3d[num_targets - i++] = { cp, cr, cy: y, p, r, y }
 				}
 			}
 		} else if (mode == "tracking") {
@@ -527,55 +601,116 @@ const Logic = (() => {
 				speed_steps
 			} = Config.tracking
 			const { tracking } = State
-			const { move, size_lerp, speed_lerp, target } = tracking
+			const {
+				move,
+				size_lerp,
+				speed_lerp,
+				target,
+				target_3d
+			} = tracking
 			if (State.input.mb_left) {
-				const speed = target.r * move.speed * move.direction
-				target.x += speed * (now_ms - timer.prev_ms)
-				if (speed_lerp.active) {
-					const p = clamp_01(
-						(now_ms - speed_lerp.start_ms) / speed_lerp_ms
-					)
-					if (p == 1) {
-						speed_lerp.active = false
-						move.speed = speed_lerp.to
-					} else {
-						move.speed = linear_interpolate(speed_lerp.from, speed_lerp.to, p)
+				if (State.camera.mode == "2d") {
+					const speed = target.r * move.speed * move.direction
+					target.x += speed * (now_ms - timer.prev_ms)
+					if (speed_lerp.active) {
+						const p = clamp_01(
+							(now_ms - speed_lerp.start_ms) / speed_lerp_ms
+						)
+						if (p == 1) {
+							speed_lerp.active = false
+							move.speed = speed_lerp.to
+						} else {
+							move.speed = linear_interpolate(speed_lerp.from, speed_lerp.to, p)
+						}
+					} else if (now_ms >= tracking.next_change_move_ms) {
+						if (Math.random() < (move.direction_change_rate += .2)) {
+							move.direction *= -1
+							move.direction_change_rate = 0
+						}
+						const index = (Math.random() * speed_steps.length) | 0
+						speed_lerp.active = true
+						speed_lerp.from = move.speed
+						speed_lerp.start_ms = now_ms
+						speed_lerp.to = base_speed * speed_steps[index]
+						tracking.next_change_move_ms = now_ms + Config.tracking.move_change_interval_ms
 					}
-				} else if (now_ms >= tracking.next_change_move_ms) {
-					if (Math.random() < (move.direction_change_rate += .2)) {
-						move.direction *= -1
-						move.direction_change_rate = 0
+					if (size_lerp.active) {
+						const p = clamp_01(
+							(now_ms - size_lerp.start_ms) / size_lerp_ms
+						)
+						if (p == 1) {
+							size_lerp.active = false
+							target.r = size_lerp.to
+						} else {
+							target.r = linear_interpolate(size_lerp.from, size_lerp.to, p)
+						}
+						target.cr = calc_core_radius(target.r, base_radius)
+					} else if (now_ms >= tracking.next_change_size_ms) {
+						const index = (Math.random() * size_steps.length) | 0
+						size_lerp.active = true
+						size_lerp.from = target.r
+						size_lerp.start_ms = now_ms
+						size_lerp.to = base_radius * size_steps[index]
+						tracking.next_change_size_ms = now_ms + Config.tracking.size_change_interval_ms
 					}
-					const index = (Math.random() * speed_steps.length) | 0
-					speed_lerp.active = true
-					speed_lerp.from = move.speed
-					speed_lerp.start_ms = now_ms
-					speed_lerp.to = base_speed * speed_steps[index]
-					tracking.next_change_move_ms = now_ms + Config.tracking.move_change_interval_ms
+					const theta = to_rad(move.direction * 30 - 90)
+					const cd = target.r - target.cr
+					target.cx = target.x + cd * Math.cos(theta)
+					target.cy = target.y + cd * Math.sin(theta)
+				} else {
+					const base_radius_rad = px_to_rad(base_radius)
+					const dt = (now_ms - timer.prev_ms)
+					const speed = target_3d.r * move.speed * move.direction
+					target_3d.y += speed * dt
+					if (speed_lerp.active) {
+						const p = clamp_01(
+							(now_ms - speed_lerp.start_ms) / speed_lerp_ms
+						)
+						if (p == 1) {
+							speed_lerp.active = false
+							move.speed = speed_lerp.to
+						} else {
+							move.speed = linear_interpolate(speed_lerp.from, speed_lerp.to, p)
+						}
+					} else if (now_ms >= tracking.next_change_move_ms) {
+						if (Math.random() < (move.direction_change_rate += .2)) {
+							move.direction *= -1
+							move.direction_change_rate = 0
+						}
+						const index = (Math.random() * speed_steps.length) | 0
+						speed_lerp.active = true
+						speed_lerp.from = move.speed
+						speed_lerp.start_ms = now_ms
+						speed_lerp.to = base_speed * speed_steps[index]
+						tracking.next_change_move_ms = now_ms + Config.tracking.move_change_interval_ms
+					}
+					if (size_lerp.active) {
+						const p = clamp_01(
+							(now_ms - size_lerp.start_ms) / size_lerp_ms
+						)
+						if (p == 1) {
+							size_lerp.active = false
+							target_3d.r = size_lerp.to
+						} else {
+							target_3d.r = linear_interpolate(size_lerp.from, size_lerp.to, p)
+						}
+						target_3d.cr = calc_core_radius(target_3d.r, base_radius_rad)
+						target_3d.cp = target_3d.p + core_offset_angle(target_3d.r, target_3d.cr)
+					} else if (now_ms >= tracking.next_change_size_ms) {
+						const index = (Math.random() * size_steps.length) | 0
+						size_lerp.active = true
+						size_lerp.from = target_3d.r
+						size_lerp.start_ms = now_ms
+						size_lerp.to = px_to_rad(
+							base_radius * size_steps[index]
+						)
+						tracking.next_change_size_ms = now_ms + Config.tracking.size_change_interval_ms
+					}
+					const theta = to_rad(move.direction * 30 - 90)
+					const alpha = core_offset_angle(target_3d.r, target_3d.cr)
+					target_3d.cp = target_3d.p - alpha * Math.sin(theta)
+					target_3d.cy = target_3d.y + alpha * Math.cos(theta)
 				}
-				if (size_lerp.active) {
-					const p = clamp_01(
-						(now_ms - size_lerp.start_ms) / size_lerp_ms
-					)
-					if (p == 1) {
-						size_lerp.active = false
-						target.r = size_lerp.to
-					} else {
-						target.r = linear_interpolate(size_lerp.from, size_lerp.to, p)
-					}
-					target.cr = calc_core_radius(target.r, base_radius)
-				} else if (now_ms >= tracking.next_change_size_ms) {
-					const index = (Math.random() * size_steps.length) | 0
-					size_lerp.active = true
-					size_lerp.from = target.r
-					size_lerp.start_ms = now_ms
-					size_lerp.to = base_radius * size_steps[index]
-					tracking.next_change_size_ms = now_ms + Config.tracking.size_change_interval_ms
-				}
-				const theta = to_rad(move.direction * 30 - 90)
-				const cd = target.r - target.cr
-				target.cx = target.x + cd * Math.cos(theta)
-				target.cy = target.y + cd * Math.sin(theta)
 				shoot()
 			}
 		} else {
@@ -589,132 +724,124 @@ const Logic = (() => {
 		State.game.raf_id = requestAnimationFrame(on_frame)
 	}
 	/**
-	 * @param {number} fov_deg
+	 * @param {number} px
 	 * @returns {number}
 	 */
-	function compute_perspective_correction(fov_deg) {
-		/**
-		 * @param {number} a
-		 * @param {number} b
-		 * @param {number} eps
-		 * @param {number} whole
-		 * @param {number} depth
-		 * @returns {number}
-		 */
-		function adaptive_simpson(a, b, eps, whole, depth) {
-			const c = 0.5 * (a + b)
-			const left = simpson(a, c)
-			const right = simpson(c, b)
-			const delta = left + right - whole
-			if (depth <= 0 || Math.abs(delta) < 15 * eps) {
-				return left + right + delta / 15
-			}
-			return adaptive_simpson(a, c, eps / 2, left, depth - 1)
-				+ adaptive_simpson(c, b, eps / 2, right, depth - 1)
-		}
-		/**
-		 * @param {number} t
-		 * @returns {number}
-		 */
-		function integrand(t) {
-			const s = Math.sin(t)
-			return Math.sqrt(1 - m_neg * s * s)
-		}
-		/**
-		 * @param {number} a
-		 * @param {number} b
-		 * @returns {number}
-		 */
-		function simpson(a, b) {
-			const c = 0.5 * (a + b)
-			const h = b - a
-			return (h / 6) * (integrand(a) + 4 * integrand(c) + integrand(b))
-		}
-		const eps = 1e-10
-		const max_depth = 20
-		const fov_rad = to_rad(fov_deg)
-		const half_fov = fov_rad / 2
-		const tan_half_fov = Math.tan(half_fov)
-		const m_neg = -tan_half_fov * tan_half_fov
-		const a = 0
-		const b = half_fov
-		const whole = simpson(a, b)
-		const e_inc = adaptive_simpson(a, b, eps, whole, max_depth)
-		const ratio = (2 / fov_rad) * e_inc * Math.cos(half_fov)
-		return 2 * tan_half_fov * ratio
+	function px_to_rad(px) {
+		return Math.atan(
+			(2 * px / State.device.width) * Math.tan(
+				to_rad(Config.view.hfov_deg) / 2
+			)
+		)
+	}
+	/**
+	 * @param {number} rad
+	 * @returns {number}
+	 */
+	function rad_to_px(rad) {
+		return (State.device.width / 2) * Math.tan(rad) / Math.tan(
+			Logic.to_rad(Config.view.hfov_deg) / 2
+		)
 	}
 	/** @returns {void} */
 	function shoot() {
-		const { stats, tracking } = State
-		const { pitch, x: xx, y: yy, yaw } = State.camera
-		const { now_ms, now_s, prev_ms } = State.timer
-		const { mode } = State.game
+		const { camera, game, stats, timer, tracking } = State
+		const {
+			mode: camera_mode,
+			pitch,
+			x: xx,
+			y: yy,
+			yaw
+		} = camera
+		const { mode } = game
+		const { now_ms, now_s, prev_ms } = timer
 		let is_hit = false
 		let is_crit = false
 		if (mode == "flick") {
-			const { targets } = State.flick
-			const { cr, cy, r, x, y } = targets[targets.length - 1]
-			const dx = x - xx
-			is_hit = dx ** 2 + (y - yy) ** 2 <= r * r
-			is_crit = dx ** 2 + (cy - yy) ** 2 <= cr * cr
-			if (is_hit) {
-				if (is_crit) {
-					SFX.play_crit()
-				} else {
-					SFX.play_hit()
-				}
-				State.impacts.push(
-					{ c: is_crit, r, t: now_s, x: xx, y: yy }
-				)
-				targets.length--
-			}
-		} else if (mode == "flick_3d") {
-			/**
-			 * @param {[ number, number, number ]} a
-			 * @param {[ number, number, number ]} b
-			 * @returns {number}
-			 */
-			function dot(a, b) {
-				return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-			}
-			const { targets } = State.flick_3d
-			const { cr, cp, p, r, y } = targets[targets.length - 1]
-			const d_cam = dir_from_yaw_pitch(yaw, pitch)
-			const d_body = dir_from_yaw_pitch(y, p)
-			const d_core = dir_from_yaw_pitch(y, cp)
-			const hit_body = dot(d_cam, d_body) >= Math.cos(r)
-			const hit_core = dot(d_cam, d_core) >= Math.cos(cr)
-			is_hit = hit_body
-			is_crit = hit_core
-			if (is_hit) {
-				if (is_crit) SFX.play_crit()
-				else SFX.play_hit()
-				State.impacts_3d.push(
-					{
-						c: is_crit,
-						p: pitch,
-						r,
-						t: State.timer.now_s,
-						y: yaw
+			if (camera_mode == "2d") {
+				const { targets } = State.flick
+				const { cr, cy, r, x, y } = targets[targets.length - 1]
+				const dx = x - xx
+				is_hit = dx ** 2 + (y - yy) ** 2 <= r * r
+				is_crit = dx ** 2 + (cy - yy) ** 2 <= cr * cr
+				if (is_hit) {
+					if (is_crit) {
+						SFX.play_crit()
+					} else {
+						SFX.play_hit()
 					}
-				)
-				targets.length--
+					State.impacts.push(
+						{ c: is_crit, r, t: now_s, x: xx, y: yy }
+					)
+					targets.length--
+				}
+			} else {
+				const { targets_3d } = State.flick
+				const { cr, cp, p, r, y } = targets_3d[targets_3d.length - 1]
+				const d_cam = dir_from_yaw_pitch(yaw, pitch)
+				const d_body = dir_from_yaw_pitch(y, p)
+				const d_core = dir_from_yaw_pitch(y, cp)
+				const hit_body = dot(d_cam, d_body) >= Math.cos(r)
+				const hit_core = dot(d_cam, d_core) >= Math.cos(cr)
+				is_hit = hit_body
+				is_crit = hit_core
+				if (is_hit) {
+					if (is_crit) SFX.play_crit()
+					else SFX.play_hit()
+					State.impacts_3d.push(
+						{
+							c: is_crit,
+							p: pitch,
+							r,
+							t: State.timer.now_s,
+							y: yaw
+						}
+					)
+					targets_3d.length--
+				}
+
 			}
 		} else if (mode == "tracking") {
-			const { cr, cy, r, x, y } = tracking.target
-			const dx = x - xx
-			is_hit = dx ** 2 + (y - yy) ** 2 <= r * r
-			is_crit = dx ** 2 + (cy - yy) ** 2 <= cr * cr
-			if (is_hit && now_s >= tracking.next_impact_s) {
-				if (is_crit) {
-					SFX.play_crit()
-				} else {
-					SFX.play_hit()
+			if (camera_mode == "2d") {
+				const { cr, cy, r, x, y } = tracking.target
+				const dx = x - xx
+				is_hit = dx ** 2 + (y - yy) ** 2 <= r * r
+				is_crit = dx ** 2 + (cy - yy) ** 2 <= cr * cr
+				if (is_hit && now_s >= tracking.next_impact_s) {
+					if (is_crit) {
+						SFX.play_crit()
+					} else {
+						SFX.play_hit()
+					}
+					State.impacts.push(
+						{ c: is_crit, r, t: now_s, x: xx, y: yy }
+					)
+					tracking.next_impact_s = now_s + Config.tracking.impact_interval_s
 				}
-				State.impacts.push(
-					{ c: is_crit, r, t: now_s, x: xx, y: yy }
-				)
-				tracking.next_impact_s = now_s + Config.tracking.impact_interval_s
+			} else {
+				const { cp, cr, cy, p, r, y } = tracking.target_3d
+				const d_cam = dir_from_yaw_pitch(yaw, pitch)
+				const d_body = dir_from_yaw_pitch(y, p)
+				const d_core = dir_from_yaw_pitch(cy, cp)
+				is_hit = dot(d_cam, d_body) >= Math.cos(r)
+				is_crit = dot(d_cam, d_core) >= Math.cos(cr)
+				if (is_hit && now_s >= tracking.next_impact_s) {
+					if (is_crit) {
+						SFX.play_crit()
+					} else {
+						SFX.play_hit()
+					}
+					State.impacts_3d.push(
+						{
+							c: is_crit,
+							p: pitch,
+							r,
+							t: now_s,
+							y: yaw
+						}
+					)
+					tracking.next_impact_s = now_s + Config.tracking.impact_interval_s
+				}
 			}
 		} else {
 			throw Error()
@@ -739,10 +866,11 @@ const Logic = (() => {
 		}
 	}
 	/**
-	 * @param {"flick" | "flick_3d" | "tracking"} type
+	 * @param {CameraMode} camera_mode
+	 * @param {GameMode} game_mode
 	 * @returns {void}
 	 */
-	function start_game(type) {
+	function start_game(camera_mode, game_mode) {
 		try {
 			document.body.requestPointerLock({ unadjustedMovement: true })
 			document.body.requestFullscreen()
@@ -750,52 +878,54 @@ const Logic = (() => {
 			document.exitPointerLock()
 			return
 		}
-		State.camera.mode = type == "flick_3d" ? "3d" : "2d"
-		State.game.mode = type
+		State.camera.mode = camera_mode
+		State.game.mode = game_mode
 		State.game.raf_id = requestAnimationFrame(on_frame)
 		const now_ms = State.timer.now_ms = State.timer.start_ms = performance.now()
-		if (type == "flick") {
-			State.flick.targets = []
-		} else if (type == "flick_3d") {
-			State.flick_3d.targets = []
-		} else if (type == "tracking") {
+		if (game_mode == "flick") {
+			return
+		} else if (game_mode == "tracking") {
 			const {
 				move_change_interval_ms,
 				size_change_interval_ms
 			} = Config.tracking
 			const { tracking } = State
-			const { move, target } = tracking
 			tracking.next_change_size_ms = now_ms + size_change_interval_ms
 			tracking.next_change_move_ms = now_ms + move_change_interval_ms
-			tracking.next_impact_s = 0
-			move.direction = Math.random() < .5 ? 1 : -1
-			move.direction_change_rate = 0
+			const { base_radius } = Config.target
+			const { move, target, target_3d } = tracking
+			move.direction = 1
 			move.speed = Config.tracking.base_speed
-			target.cx = 0
-			target.x = 0
-			target.y = 0
-			target.r = Config.target.base_radius
-			target.cr = calc_core_radius(
-				target.r,
-				Config.target.base_radius
-			)
-			target.cy = -target.r + target.cr
+			tracking.move.direction_change_rate = 0
+			tracking.next_impact_s = 0
+			if (camera_mode == "2d") {
+				const r = base_radius
+				target.cr = calc_core_radius(r, r)
+				target.cx = 0
+				target.cy = target.cr - r
+				target.r = r
+				target.x = 0
+				target.y = 0
+			} else {
+				const r = px_to_rad(base_radius)
+				const cr = calc_core_radius(r, r)
+				target_3d.cp = Math.atan(
+					Math.max(0, Math.tan(r) - Math.tan(cr))
+				)
+				target_3d.cr = cr
+				target_3d.cy = 0
+				target_3d.p = 0
+				target_3d.r = r
+				target_3d.y = 0
+			}
 		} else {
 			throw Error()
 		}
 	}
 	/** @returns {void} */
 	function stop_game() {
-		const { camera, stats } = State
-		if (camera.mode == "2d") {
-			camera.x = 0
-			camera.x = 0
-			camera.y = 0
-		} else {
-			camera.pitch = 0
-			camera.yaw = 0
-			State.impacts.clear()
-		}
+		const { camera, game, stats } = State
+		cancelAnimationFrame(game.raf_id)
 		stats.count_crit = 0
 		stats.count_hit = 0
 		stats.count_shoot = 0
@@ -805,7 +935,26 @@ const Logic = (() => {
 		stats.sum_crit_ms = 0
 		stats.sum_hit_ms = 0
 		stats.sum_shoot_ms = 0
-		cancelAnimationFrame(State.game.raf_id)
+		if (camera.mode == "2d") {
+			camera.x = 0
+			camera.y = 0
+			State.impacts.clear()
+		} else {
+			camera.pitch = 0
+			camera.yaw = 0
+			State.impacts_3d.clear()
+		}
+		if (game.mode == "flick") {
+			if (camera.mode == "2d") {
+				State.flick.targets = []
+			} else {
+				State.flick.targets_3d = []
+			}
+		} else if (game.mode == "tracking") {
+			return
+		} else {
+			throw Error()
+		}
 	}
 	/**
 	 * @param {number} deg
@@ -814,18 +963,15 @@ const Logic = (() => {
 	function to_rad(deg) {
 		return deg * Math.PI / 180
 	}
-	return {
-		dir_from_yaw_pitch,
-		hfov_to_vfov,
-		on_frame,
-		compute_perspective_correction,
-		shoot,
-		start_game,
-		stop_game,
-		to_rad
-	}
+	return _
 })()
 const Mat4 = (() => {
+	const _ = {
+		identity,
+		multiply,
+		perspective,
+		view
+	}
 	/** @returns {Float32Array<ArrayBuffer>} */
 	function identity() {
 		const m = new Float32Array(16)
@@ -948,14 +1094,10 @@ const Mat4 = (() => {
 		m[14] = 0
 		return m
 	}
-	return {
-		identity,
-		multiply,
-		perspective,
-		view
-	}
+	return _
 })()
 const Renderer = (() => {
+	const _ = { draw, resize }
 	/** @returns {void} */
 	function draw() {
 		const { height, width } = State.device
@@ -965,19 +1107,19 @@ const Renderer = (() => {
 			Math.round(width / 2),
 			Math.round(height / 2)
 		)
-		if (State.camera.mode == "3d") {
-			context.drawImage(
-				Renderer3D.image(),
-				-Math.round(width / 2),
-				-Math.round(height / 2)
-			)
-		} else {
+		if (State.camera.mode == "2d") {
 			draw_grid()
 			if (State.game.mode) {
 				draw_paths()
 				draw_targets()
 				draw_impacts()
 			}
+		} else {
+			context.drawImage(
+				Renderer3D.image(),
+				-Math.round(width / 2),
+				-Math.round(height / 2)
+			)
 		}
 		draw_crosshair()
 		context.restore()
@@ -1085,7 +1227,7 @@ const Renderer = (() => {
 		context.restore()
 	}
 	/**
-	 * @param {typeof State.tracking.target} target
+	 * @param {Target} target
 	 * @param {number} alpha
 	 * @returns {void}
 	 */
@@ -1147,9 +1289,9 @@ const Renderer = (() => {
 			gap + length * 2 + outline * 4
 		)
 		const off_context = /** @type {OffscreenCanvasRenderingContext2D} */(off.getContext("2d"))/**/
-		off_context.fillStyle = "white"
+		off_context.fillStyle = "red"
 		off_context.lineWidth = outline
-		off_context.strokeStyle = "red"
+		off_context.strokeStyle = "white"
 		off_context.fillRect(
 			outline,
 			outline,
@@ -1206,9 +1348,10 @@ const Renderer = (() => {
 		off_context.stroke()
 		return /** @type {CanvasPattern} */(off_context.createPattern(off, "repeat"))/**/
 	})()
-	return { draw, resize }
+	return _
 })()
 const Renderer3D = await (async () => {
+	const _ = { image, resize }
 	/**
 	 * @param {Float32Array} segments
 	 * @param {GLenum} [usage = context.STATIC_DRAW]
@@ -1429,13 +1572,13 @@ const Renderer3D = await (async () => {
 	/** @returns {void} */
 	function draw_grid() {
 		draw_stroke(
-			[ 0.227, 0.290, 0.407, 0.12 ],
+			[ .227, .290, .407, .12 ],
 			1.5,
 			sky_sphere
 		)
   		draw_stroke(
-  			[ 0.227, 0.290, 0.407, 0.35 ],
-  			2.0,
+  			[ .227, .290, .407, .35 ],
+  			2,
   			sky_sphere_major
   		)
 	}
@@ -1452,7 +1595,7 @@ const Renderer3D = await (async () => {
 		const { sky_sphere_radius: d } = Config.view
 		const { now_s } = State.timer
 		const max_life = duration_s + spacing * (rings - 1)
-		const base_alpha = 0.9
+		const base_alpha = .9
 		while (impacts_3d.length) {
 			if (now_s - impacts_3d.at().t > max_life) impacts_3d.drop()
 			else break
@@ -1469,22 +1612,45 @@ const Renderer3D = await (async () => {
 				const vbo = build_ring_vbo_from_angles(y, p, rr, d)
 				/** @type {[ number, number, number, number ]} */
 				const col = c ? [ 1, 0, 0, a ] : [ 1, 1, 1, a ]
-				draw_stroke(col, 2.0, vbo)
+				draw_stroke(col, 2, vbo)
 				context.deleteBuffer(vbo.vbo)
 			}
 		}
 	}
 	/** @returns {void} */
 	function draw_paths() {
-		const { targets } = State.flick_3d
-		if (!targets.length) return
 		const { sky_sphere_radius: d } = Config.view
 		/** @type {number[]} */
 		const segments = []
-		let prev = [ 0, 0, 0 ]
-		for (let i = targets.length - 1; i >= 0; i--) {
-			const t = targets[i]
-			const dir = Logic.dir_from_yaw_pitch(t.y, t.cp)
+		const cam_dir = Logic.dir_from_yaw_pitch(
+			State.camera.yaw,
+			State.camera.pitch
+		)
+		let prev = [
+			cam_dir[0] * d,
+			cam_dir[1] * d,
+			cam_dir[2] * d
+		]
+		if (State.game.mode == "flick") {
+			const { targets_3d } = State.flick
+			if (!targets_3d.length) return
+			for (let i = targets_3d.length - 1; i >= 0; i--) {
+				const t = targets_3d[i]
+				const dir = Logic.dir_from_yaw_pitch(t.cy, t.cp)
+				const pos = [ dir[0] * d, dir[1] * d, dir[2] * d ]
+				segments.push(
+					prev[0],
+					prev[1],
+					prev[2],
+					pos[0],
+					pos[1],
+					pos[2]
+				)
+				prev = pos
+			}
+		} else if (State.game.mode == "tracking") {
+			const { target_3d } = State.tracking
+			const dir = Logic.dir_from_yaw_pitch(target_3d.cy, target_3d.cp)
 			const pos = [ dir[0] * d, dir[1] * d, dir[2] * d ]
 			segments.push(
 				prev[0],
@@ -1494,13 +1660,15 @@ const Renderer3D = await (async () => {
 				pos[1],
 				pos[2]
 			)
-			prev = pos
+		} else {
+			throw Error()
 		}
+		if (segments.length === 0) return
 		const vbo_info = build_stroke_vbo(
 			new Float32Array(segments),
 			context.DYNAMIC_DRAW
 		)
-		draw_stroke([ 1, 1, 1, 0.4 ], 2.0, vbo_info)
+		draw_stroke([ 1, 1, 1, .4 ], 2, vbo_info)
 		context.deleteBuffer(vbo_info.vbo)
 	}
 	/**
@@ -1582,41 +1750,52 @@ const Renderer3D = await (async () => {
 		context.disableVertexAttribArray(a_endpoint)
 	}
 	/**
-	 * @param {typeof State.flick_3d.targets[0]} target
+	 * @param {Target3D} target
 	 * @param {number} alpha
 	 * @returns {void}
 	 */
 	function draw_target(target, alpha) {
 		const { sky_sphere_radius: d } = Config.view
-		const { cp, cr, p, r, y } = target
+		const { cp, cr, cy, p, r, y } = target
+		const line_width = 1.5
+		const line_width_rad = Logic.px_to_rad(line_width)
 		/** @type {[ number, number, number, number ]} */
-		const body_fill = [ 0.22, 0.35, 0.47, alpha ]
+		const body_fill = [ .22, .35, .47, alpha ]
 		/** @type {[ number, number, number, number ]} */
-		const core_fill = [ 0.11, 0.204, 0.29, alpha ]
+		const core_fill = [ .11, .204, .29, alpha ]
 		/** @type {[ number, number, number, number ]} */
-		const outline_col = [ 1.0, 0.0, 0.0, alpha ]
+		const outline_col = [ 1, 0, 0, alpha ]
 		let vbo = build_disc_vbo_from_angles(y, p, r, d)
 		draw_fill(body_fill, vbo)
 		context.deleteBuffer(vbo.vbo)
-		vbo = build_ring_vbo_from_angles(y, p, r, d)
-		draw_stroke(outline_col, 2.0, vbo)
+		vbo = build_ring_vbo_from_angles(y, p, r + line_width_rad / 2, d)
+		draw_stroke(outline_col, line_width, vbo)
 		context.deleteBuffer(vbo.vbo)
-		vbo = build_disc_vbo_from_angles(y, cp, cr, d)
+		vbo = build_disc_vbo_from_angles(cy, cp, cr, d)
 		draw_fill(core_fill, vbo)
 		context.deleteBuffer(vbo.vbo)
-		vbo = build_ring_vbo_from_angles(y, cp, cr, d)
-		draw_stroke(outline_col, 2.0, vbo)
+		vbo = build_ring_vbo_from_angles(cy, cp, cr + line_width_rad / 2, d)
+		draw_stroke(outline_col, line_width, vbo)
 		context.deleteBuffer(vbo.vbo)
 	}
 	/** @returns {void} */
 	function draw_targets() {
-		const { targets } = State.flick_3d
-		if (!targets.length) return
-		const { inactive_alpha } = Config.flick_3d
-		for (let i = 0; i + 1 < targets.length; i++) {
-			draw_target(targets[i], inactive_alpha)
+		if (State.game.mode == "flick") {
+			const { targets_3d } = State.flick
+			if (!targets_3d.length) return
+			const { inactive_alpha } = Config.flick
+			for (let i = 0; i + 1 < targets_3d.length; i++) {
+				draw_target(targets_3d[i], inactive_alpha)
+			}
+			draw_target(
+				targets_3d[targets_3d.length - 1],
+				1
+			)
+		} else if (State.game.mode == "tracking") {
+			draw_target(State.tracking.target_3d, 1)
+		} else {
+			throw Error()
 		}
-		draw_target(targets[targets.length - 1], 1.0)
 	}
 	/** @returns {ImageBitmap} */
 	function image() {
@@ -1633,7 +1812,7 @@ const Renderer3D = await (async () => {
 			context.SRC_ALPHA,
 			context.ONE_MINUS_SRC_ALPHA
 		)
-		State.camera.proj = Mat4.perspective(vfov_deg, aspect, 0.1, 2000.0)
+		State.camera.proj = Mat4.perspective(vfov_deg, aspect, .1, 2_000)
 		State.camera.view = Mat4.view(yaw, pitch)
 		draw_grid()
 		if (State.game.mode) {
@@ -1816,7 +1995,7 @@ void main() { out_color = u_color; }`
 		const seg_h = 18
 		/** @type {number[]} */
 		const segments = []
-		const phi = Math.PI * 0.5
+		const phi = Math.PI * .5
 		const cy = Math.cos(phi)
 		const sy = Math.sin(phi)
 		for (let x = 0; x < seg_w; x++) {
@@ -1832,7 +2011,7 @@ void main() { out_color = u_color; }`
 		}
 		const th_list = [
 			0,
-			Math.PI * 0.5,
+			Math.PI * .5,
 			Math.PI,
 			Math.PI * 1.5
 		]
@@ -1856,9 +2035,10 @@ void main() { out_color = u_color; }`
 			context.STATIC_DRAW
 		)
 	})()
-	return { image, resize }
+	return _
 })()
 const SFX = await (async () => {
+	const _ = { now, play_crit, play_hit }
 	/** @returns {number} */
 	function now() {
 		return context.currentTime
@@ -1909,25 +2089,25 @@ const SFX = await (async () => {
 				highpass.frequency.value = 700
 				const air = off.createBiquadFilter()
 				air.type = "peaking"
-				air.frequency.value = 6000
-				air.Q.value = 1.0
+				air.frequency.value = 6_000
+				air.Q.value = 1
 				air.gain.value = 6
 				const shaper = off.createWaveShaper()
 				const shaper_curve = new Float32Array(256)
 				for (let i = 0; i < 256; i++) {
 					const x = i / 128 - 1
-					shaper_curve[i] = Math.tanh(2.0 * x)
+					shaper_curve[i] = Math.tanh(2 * x)
 				}
 				shaper.curve = shaper_curve
 				shaper.oversample = "2x"
 				const mix = off.createGain()
-				mix.gain.value = 1.0
+				mix.gain.value = 1
 				mix.connect(highpass)
 				highpass.connect(air)
 				air.connect(shaper)
 				shaper.connect(off.destination)
-				const base_hz = 1600
-				const ratio_list = [ 1.00, 2.41, 3.01, 3.77 ]
+				const base_hz = 1_600
+				const ratio_list = [ 1, 2.41, 3.01, 3.77 ]
 				const gain_list = [ .24, .16, .11, .09 ]
 				const total_s = .18
 				const bell_env = off.createGain()
@@ -1953,9 +2133,9 @@ const SFX = await (async () => {
 				const click_len = .026
 				const click_sharp = .9
 				const click_body_amt = .14
-				const click_bandpass_freq = 4800
-				const click_q_factor = 2.0 + click_sharp * .8
-				const click_body_freq = 1500
+				const click_bandpass_freq = 4_800
+				const click_q_factor = 2 + click_sharp * .8
+				const click_body_freq = 1_500
 				const click_gain_mul = .55
 				const noise_frames = Math.round(sr * Math.min(.05, click_len))
 				const noise_buf = off.createBuffer(1, noise_frames, sr)
@@ -1975,7 +2155,7 @@ const SFX = await (async () => {
 				click_bandpass.Q.value = click_q_factor
 				const pulse = off.createOscillator()
 				pulse.type = "square"
-				pulse.frequency.value = 2000 + click_sharp * 4200
+				pulse.frequency.value = 2_000 + click_sharp * 4_200
 				const pulse_gain = off.createGain()
 				pulse_gain.gain.value = (.002 + click_sharp * .010) * click_gain_mul
 				const body = off.createOscillator()
@@ -2013,7 +2193,7 @@ const SFX = await (async () => {
 				const len = .035
 				const sharp = .8
 				const body_amt = .55
-				const bp_freq = 1400
+				const bp_freq = 1_400
 				const q_factor = .8 + sharp * 1.5
 				const body_freq = 320
 				const noise_len = Math.round(sr * .03)
@@ -2026,7 +2206,7 @@ const SFX = await (async () => {
 				noise.buffer = noise_buf
 				const pulse = off.createOscillator()
 				pulse.type = "square"
-				pulse.frequency.value = 2000 + sharp * 4000
+				pulse.frequency.value = 2_000 + sharp * 4_000
 				const pulse_gain = off.createGain()
 				pulse_gain.gain.value = (.002 + sharp * .01)
 				const body = off.createOscillator()
@@ -2042,7 +2222,7 @@ const SFX = await (async () => {
 				bandpass.frequency.value = bp_freq
 				bandpass.Q.value = q_factor
 				const env = off.createGain()
-				env.gain.setValueAtTime(1.0, t0)
+				env.gain.setValueAtTime(1, t0)
 				env.gain.exponentialRampToValueAtTime(.001, t0 + Math.max(.02, len))
 				const shaper = off.createWaveShaper()
 				const curve = new Float32Array(256)
@@ -2071,50 +2251,10 @@ const SFX = await (async () => {
 			})()
 		]
 	)
-	return { now, play_crit, play_hit }
+	return _
 })()
 const State = (() => {
-	/** @template T */
-	function create_queue() {
-		/**	@type {T[]} */
-		let q = []
-		let head = 0
-		const THRESH = 2048
-		return {
-			/** @returns {void} */
-			clear() {
-				q = []
-				head = 0
-			},
-			/** @returns {void} */
-			drop() {
-				if (head >= q.length) return
-				if (++head > THRESH && head > (q.length >>> 1)) {
-					q = q.slice(head)
-					head = 0
-				}
-			},
-			/**
-			 * @param {number} [index = 0]
-			 * @returns {T}
-			 */
-			at(index = 0) {
-				return /** @type {T} */(head + index < q.length ? q[head + index] : void 0)/**/
-			},
-			/** @returns {number} */
-			get length() {
-				return q.length - head
-			},
-			/**
-			 * @param {T} v
-			 * @returns {void}
-			 */
-			push(v) {
-				q.push(v)
-			}
-		}
-	}
-	return {
+	const _ = {
 		camera: {
 			/** @type {"2d" | "3d"} */
 			mode: "2d",
@@ -2128,37 +2268,18 @@ const State = (() => {
 		device: { height: 0, width: 0 },
 		flick: {
 			best_score: Number(
-				localStorage.getItem(Config.ls_keys.flick) || 0
+				localStorage.getItem("flick.best_score") || 0
 			),
-			/**
-			 * @type {{
-			 *	 cr: number
-			 *   cx: number
-			 *	 cy: number
-			 *	 r: number
-			 *	 x: number
-			 *	 y: number
-			 * }[]}
-			 */
-			targets: []
-		},
-		flick_3d: {
-			best_score: Number(
-				localStorage.getItem(Config.ls_keys.flick_3d) || 0
+			best_score_3d: Number(
+				localStorage.getItem("flick.best_score_3d") || 0
 			),
-			/**
-			 * @type {{
-			 *	 cr: number
-			 *	 cp: number
-			 *	 p: number
-			 *	 r: number
-			 *	 y: number
-			 * }[]}
-			 */
-			targets: []
+			/** @type {Target[]} */
+			targets: [],
+			/** @type {Target3D[]} */
+			targets_3d: []
 		},
 		game: {
-			/** @type {"flick" | "flick_3d" | "tracking"?} */
+			/** @type {GameMode?} */
 			mode: null,
 			raf_id: 0
 		},
@@ -2209,7 +2330,10 @@ const State = (() => {
 		},
 		tracking: {
 			best_score: Number(
-				localStorage.getItem(Config.ls_keys.tracking) || 0
+				localStorage.getItem("tracking.best_score") || 0
+			),
+			best_score_3d: Number(
+				localStorage.getItem("tracking.best_score_3d") || 0
 			),
 			move: {
 				direction: 0,
@@ -2231,29 +2355,100 @@ const State = (() => {
 				from: 0,
 				to: 0
 			},
-			target: { cr: 0, cx: 0, cy: 0, r: 0, x: 0, y: 0 }
+			target: { cr: 0, cx: 0, cy: 0, r: 0, x: 0, y: 0 },
+			target_3d: { cp: 0, cr: 0, cy: 0, p: 0, r: 0, y: 0 }
 		}
 	}
+	/** @template T */
+	function create_queue() {
+		/**	@type {T[]} */
+		let q = []
+		let head = 0
+		const THRESH = 2_048
+		return {
+			/** @returns {void} */
+			clear() {
+				q = []
+				head = 0
+			},
+			/** @returns {void} */
+			drop() {
+				if (head >= q.length) return
+				if (++head > THRESH && head > (q.length >>> 1)) {
+					q = q.slice(head)
+					head = 0
+				}
+			},
+			/**
+			 * @param {number} [index = 0]
+			 * @returns {T}
+			 */
+			at(index = 0) {
+				return /** @type {T} */(head + index < q.length ? q[head + index] : void 0)/**/
+			},
+			/** @returns {number} */
+			get length() {
+				return q.length - head
+			},
+			/**
+			 * @param {T} v
+			 * @returns {void}
+			 */
+			push(v) {
+				q.push(v)
+			}
+		}
+	}
+	return _
 })()
-/* Controller */
 {
+	const flick_btn = /** @type {HTMLButtonElement} */(document.getElementById("flick"))/**/
+	const flick_3d_btn = /** @type {HTMLButtonElement} */(document.getElementById("flick_3d"))/**/
+	const tracking_btn = /** @type {HTMLButtonElement} */(document.getElementById("tracking"))/**/
+	const tracking_3d_btn = /** @type {HTMLButtonElement} */(document.getElementById("tracking_3d"))/**/
+	addEventListener(
+		"resize",
+		on_resize,
+		{ passive: true }
+	)
+	document.addEventListener("fullscreenchange", on_resize)
+	document.addEventListener("keydown", on_keydown)
+	document.addEventListener(
+		"pointercancel",
+		on_pointercancel
+	)
+	document.addEventListener("pointerdown", on_pointerdown)
+	document.addEventListener(
+		"pointerlockchange",
+		on_pointerlockchange
+	)
+	document.addEventListener(
+		"pointermove",
+		on_pointermove,
+		{ passive: true }
+	)
+	document.addEventListener("pointerup", on_pointerup)
+	flick_btn.addEventListener("click", on_click)
+	flick_3d_btn.addEventListener("click", on_click)
+	tracking_btn.addEventListener("click", on_click)
+	tracking_3d_btn.addEventListener("click", on_click)
+	on_resize()
 	/**
 	 * @param {MouseEvent} ev
 	 * @returns {void}
 	 */
 	function on_click(ev) {
-		/** @type {"flick" | "flick_3d" | "tracking"} */
-		let mode
 		if (ev.target == flick_btn) {
-			mode = "flick"
+			Logic.start_game("2d", "flick")
 		} else if (ev.target == flick_3d_btn) {
-			mode = "flick_3d"
+			Logic.start_game("3d", "flick")
 		} else if (ev.target == tracking_btn) {
-			mode = "tracking"
+			Logic.start_game("2d", "tracking")
+		} else if (ev.target == tracking_3d_btn) {
+			Logic.start_game("3d", "tracking")
 		} else {
 			throw Error()
 		}
-		Logic.start_game(mode)
 	}
 	/**
 	 * @param {KeyboardEvent} ev
@@ -2287,7 +2482,10 @@ const State = (() => {
 	 */
 	function on_pointermove(ev) {
 		if (!State.game.mode) return
-		if (State.game.mode === "flick_3d") {
+		if (State.camera.mode == "2d") {
+			State.camera.x += ev.movementX
+			State.camera.y += ev.movementY
+		} else {
 			const { hfov_deg } = Config.view
 			const { camera } = State
 			const sens = Logic.compute_perspective_correction(hfov_deg)
@@ -2299,9 +2497,6 @@ const State = (() => {
 				Math.min(camera.pitch, pitch_limit),
 				-pitch_limit
 			)
-		} else {
-			State.camera.x += ev.movementX
-			State.camera.y += ev.movementY
 		}
 	}
 	/**
@@ -2329,33 +2524,4 @@ const State = (() => {
 		Renderer.resize()
 		HUD.update_game_sens()
 	}
-	const flick_btn = /** @type {HTMLButtonElement} */(document.getElementById("flick"))/**/
-	const tracking_btn = /** @type {HTMLButtonElement} */(document.getElementById("tracking"))/**/
-	const flick_3d_btn = /** @type {HTMLButtonElement} */(document.getElementById("flick_3d"))/**/
-	addEventListener(
-		"resize",
-		on_resize,
-		{ passive: true }
-	)
-	document.addEventListener("fullscreenchange", on_resize)
-	document.addEventListener("keydown", on_keydown)
-	document.addEventListener(
-		"pointercancel",
-		on_pointercancel
-	)
-	document.addEventListener("pointerdown", on_pointerdown)
-	document.addEventListener(
-		"pointerlockchange",
-		on_pointerlockchange
-	)
-	document.addEventListener(
-		"pointermove",
-		on_pointermove,
-		{ passive: true }
-	)
-	document.addEventListener("pointerup", on_pointerup)
-	flick_btn.addEventListener("click", on_click)
-	tracking_btn.addEventListener("click", on_click)
-	flick_3d_btn.addEventListener("click", on_click)
-	on_resize()
 }

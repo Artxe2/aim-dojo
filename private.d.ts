@@ -1,3 +1,4 @@
+type CameraMode = "2d" | "3d"
 type DeepReadonly<T> = Readonly<{
 	[K in keyof T]:
 		T[K] extends (number | string | symbol)
@@ -6,6 +7,23 @@ type DeepReadonly<T> = Readonly<{
 				? ReadonlyArray<DeepReadonly<A>>
 				: DeepReadonly<T[K]>
 }>
+type GameMode = "flick" | "tracking"
+type Target = {
+	cr: number
+	cx: number
+	cy: number
+	r: number
+	x: number
+	y: number
+}
+type Target3D = {
+	cp: number
+	cr: number
+	cy: number
+	p: number
+	r: number
+	y: number
+}
 type VboInfo = Readonly<{
 	count: number
 	stride: number
