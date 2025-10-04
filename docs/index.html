@@ -5,6 +5,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>AIM DOJO</title>
 		<style>
+			@keyframes blur-pulse{
+				0% { filter: blur(.5px); }
+				25% { filter: blur(.75px); }
+				100% { filter: blur(1px); }
+			}
 			* {
 				background: none;
 				border: none;
@@ -20,6 +25,7 @@
 				height: 100%;
 				user-select: none;
 			}
+			body.locked canvas { animation: blur-pulse 1s ease-in-out infinite alternate; }
 			body.locked .menu { display: none; }
 			body:not(.locked) canvas { filter: blur(4px); }
 			canvas {
@@ -31,6 +37,15 @@
 			label {
 				color: #9cd2ff;
 				font-weight: bold;
+			}
+			.bg {
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				filter: brightness(0.5);
 			}
 			.menu {
 				display: grid;
@@ -85,6 +100,9 @@
 		</style>
 	</head>
 	<body>
+		<video class="bg" autoplay muted loop playsinline>
+			<source src="./bg.mp4" type="video/mp4">
+		</video>
 		<div id="wrap">
 			<canvas class="blur" id="canvas"></canvas>
 			<div class="hud" id="hud">

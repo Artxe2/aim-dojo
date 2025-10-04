@@ -3,10 +3,10 @@ const Config = (() => {
 	const _ = {
 		audio: { volume: .5 },
 		crosshair: {
-			gap: 4,
-			length: 20,
-			outline: 1,
-			thickness: 1
+			gap: 6,
+			length: 12,
+			outline: 0,
+			thickness: 3
 		},
 		flick: {
 			first_dist_mul: 4,
@@ -31,7 +31,7 @@ const Config = (() => {
 			size_lerp_ms: 100,
 			size_steps: [ 1, 1, 2, 3, 5, 8 ],
 			speed_lerp_ms: 100,
-			speed_steps: [ 1, 1, 2, 3 ]
+			speed_steps: [ 1, 1, 2 ]
 		},
 		view: {
 			hfov_deg: 103,
@@ -925,6 +925,7 @@ const Logic = (() => {
 	/** @returns {void} */
 	function stop_game() {
 		const { camera, game, stats } = State
+		const mode = game.mode
 		cancelAnimationFrame(game.raf_id)
 		stats.count_crit = 0
 		stats.count_hit = 0
@@ -944,13 +945,13 @@ const Logic = (() => {
 			camera.yaw = 0
 			State.impacts_3d.clear()
 		}
-		if (game.mode == "flick") {
+		if (mode == "flick") {
 			if (camera.mode == "2d") {
 				State.flick.targets = []
 			} else {
 				State.flick.targets_3d = []
 			}
-		} else if (game.mode == "tracking") {
+		} else if (mode == "tracking") {
 			return
 		} else {
 			throw Error()
@@ -1289,9 +1290,7 @@ const Renderer = (() => {
 			gap + length * 2 + outline * 4
 		)
 		const off_context = /** @type {OffscreenCanvasRenderingContext2D} */(off.getContext("2d"))/**/
-		off_context.fillStyle = "red"
-		off_context.lineWidth = outline
-		off_context.strokeStyle = "white"
+		off_context.fillStyle = "lime"
 		off_context.fillRect(
 			outline,
 			outline,
@@ -1304,18 +1303,23 @@ const Renderer = (() => {
 			thickness * 2,
 			length
 		)
-		off_context.strokeRect(
-			outline / 2,
-			outline / 2,
-			outline + thickness * 2,
-			length + outline
-		)
-		off_context.strokeRect(
-			outline / 2,
-			gap + length + outline * 2.5,
-			outline + thickness * 2,
-			length + outline
-		)
+		if (outline) {
+			off_context.globalAlpha = .75
+			off_context.lineWidth = outline
+			off_context.strokeStyle = "lime"
+			off_context.strokeRect(
+				outline / 2,
+				outline / 2,
+				outline + thickness * 2,
+				length + outline
+			)
+			off_context.strokeRect(
+				outline / 2,
+				gap + length + outline * 2.5,
+				outline + thickness * 2,
+				length + outline
+			)
+		}
 		return off
 	})()
 	const grid_pattern = (() => {
