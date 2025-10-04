@@ -734,15 +734,6 @@ const Logic = (() => {
 			)
 		)
 	}
-	/**
-	 * @param {number} rad
-	 * @returns {number}
-	 */
-	function rad_to_px(rad) {
-		return (State.device.width / 2) * Math.tan(rad) / Math.tan(
-			Logic.to_rad(Config.view.hfov_deg) / 2
-		)
-	}
 	/** @returns {void} */
 	function shoot() {
 		const { camera, game, stats, timer, tracking } = State
@@ -878,10 +869,10 @@ const Logic = (() => {
 			document.exitPointerLock()
 			return
 		}
+		const now_ms = State.timer.now_ms = State.timer.start_ms = performance.now()
 		State.camera.mode = camera_mode
 		State.game.mode = game_mode
 		State.game.raf_id = requestAnimationFrame(on_frame)
-		const now_ms = State.timer.now_ms = State.timer.start_ms = performance.now()
 		if (game_mode == "flick") {
 			return
 		} else if (game_mode == "tracking") {
