@@ -3,7 +3,7 @@ const Config = (() => {
 	const _ = {
 		audio: { volume: .5 },
 		crosshair: {
-			gap: 6,
+			gap: 4,
 			length: 12,
 			outline: 0,
 			thickness: 2
@@ -1290,7 +1290,7 @@ const Renderer = (() => {
 			gap + length * 2 + outline * 4
 		)
 		const off_context = /** @type {OffscreenCanvasRenderingContext2D} */(off.getContext("2d"))/**/
-		off_context.fillStyle = "red"
+		off_context.fillStyle = "black"
 		off_context.fillRect(
 			outline,
 			outline,
