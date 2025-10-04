@@ -57,16 +57,20 @@ const HUD = (() => {
 	}
 	/**
 	 * @param {number} hfov_deg
+	 * @param {number} [width]
 	 * @returns {number}
 	 */
-	function calc_sens_pubg(hfov_deg) {
+	function calc_sens_pubg(
+		hfov_deg,
+		width = State.device.width
+	) {
 		const base_fov = 80
 		const base_sens = 50
 		const base_yaw = .0444400004444
 		const step = 15.0515
 		const sens50_yaw = Logic.to_rad(hfov_deg / base_fov * base_yaw)
 		const rad_per_count = Logic.compute_perspective_correction(hfov_deg)
-			/ State.device.width
+			/ width
 		return base_sens + step * (Math.log(rad_per_count / sens50_yaw) / Math.LN2)
 	}
 	/**
@@ -190,13 +194,21 @@ const HUD = (() => {
 			pubg_fpp_el,
 			Math.round(pubg_fpp)
 		)
-		const pubg_tpp = calc_sens_pubg(pubg_fov)
+		const pubg_tpp = calc_sens_pubg(
+			pubg_fov,
+			State.device.width * .9
+		)
 		set_text_if_changed(
 			pubg_tpp_el,
 			Math.round(pubg_tpp)
 		)
-		const pubg_x1_v = calc_sens_pubg_v(pubg_fov)
-		set_text_if_changed(pubg_v_el, round_to_2(pubg_x1_v))
+		const pubg_ads = calc_sens_pubg(pubg_fov)
+		set_text_if_changed(
+			pubg_ads_el,
+			Math.round(pubg_ads)
+		)
+		const pubg_v = calc_sens_pubg_v(pubg_fov)
+		set_text_if_changed(pubg_v_el, round_to_2(pubg_v))
 		const pubg_x2 = calc_sens_pubg(pubg_fov / 2)
 		set_text_if_changed(pubg_x2_el, Math.round(pubg_x2))
 		const pubg_x3 = calc_sens_pubg(pubg_fov / 3)
@@ -343,6 +355,7 @@ const HUD = (() => {
 	const ow_freja_el = /** @type {HTMLSpanElement} */(document.getElementById("ow_freja"))/**/
 	const ow_hipfire_el = /** @type {HTMLSpanElement} */(document.getElementById("ow_hipfire"))/**/
 	const ow_widow_el = /** @type {HTMLSpanElement} */(document.getElementById("ow_widow"))/**/
+	const pubg_ads_el = /** @type {HTMLSpanElement} */(document.getElementById("pubg_ads"))/**/
 	const pubg_fpp_el = /** @type {HTMLSpanElement} */(document.getElementById("pubg_fpp"))/**/
 	const pubg_tpp_el = /** @type {HTMLSpanElement} */(document.getElementById("pubg_tpp"))/**/
 	const pubg_v_el = /** @type {HTMLSpanElement} */(document.getElementById("pubg_v"))/**/
