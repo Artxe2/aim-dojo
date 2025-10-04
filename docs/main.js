@@ -6,7 +6,7 @@ const Config = (() => {
 			gap: 6,
 			length: 12,
 			outline: 0,
-			thickness: 3
+			thickness: 2
 		},
 		flick: {
 			first_dist_mul: 4,
@@ -1290,7 +1290,7 @@ const Renderer = (() => {
 			gap + length * 2 + outline * 4
 		)
 		const off_context = /** @type {OffscreenCanvasRenderingContext2D} */(off.getContext("2d"))/**/
-		off_context.fillStyle = "lime"
+		off_context.fillStyle = "red"
 		off_context.fillRect(
 			outline,
 			outline,
